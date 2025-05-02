@@ -19,6 +19,8 @@
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+
+  --color-blue: rgb(49, 165, 227);
 }
 
 /* semantic color variables for this project */
@@ -63,9 +65,9 @@ body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
-  transition:
+  /* transition:
     color 0.5s,
-    background-color 0.5s;
+    background-color 0.5s; */
   line-height: 1.6;
   font-family:
     Inter,
@@ -80,7 +82,7 @@ body {
     'Droid Sans',
     'Helvetica Neue',
     sans-serif;
-  font-size: 15px;
+  font-size: 1.5rem;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

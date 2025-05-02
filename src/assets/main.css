@@ -1,7 +1,8 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
+  /* max-width: 1280px; */
+  max-width: 2560px;
   margin: 0 auto;
   padding: 2rem;
   font-weight: normal;
@@ -10,7 +11,7 @@
 a,
 .blue {
   text-decoration: none;
-  color: rgb(49, 165, 227);
+  color: var(--color-blue);
   transition: 0.4s;
   padding: 3px;
 }
@@ -26,6 +27,8 @@ a,
   cursor: pointer;
   box-shadow: 0 0.5rem 1rem rgba(143, 142, 142, 0.15) !important;
   background: var(--color-border);
+
+  font-size: inherit;
 }
 
 button:hover {
