@@ -376,7 +376,7 @@ export default defineComponent({
                 matrixSum += this.filterMatrix[ky][kx];
               }
             }
-            newData[outputIndex] = sum / matrixSum;
+            newData[outputIndex] = sum / (matrixSum || 1);
           }
         }
       }

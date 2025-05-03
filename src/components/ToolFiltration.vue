@@ -69,7 +69,7 @@ export default defineComponent({
             this.$emit('updateFilterMatrix', this.filterMatrix);
         },
         clearFilter() {
-            this.liveUpdate = true;
+            this.liveUpdate = false;
             this.filterProfile = "identity";
         },
     },
