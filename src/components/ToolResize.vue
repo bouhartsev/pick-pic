@@ -2,7 +2,7 @@
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-    name: 'EditImage',
+    name: 'ResizeImage',
     props: {
         width: Number,
         height: Number,
@@ -16,9 +16,6 @@ export default defineComponent({
             resizeUnit: "pixels",
             whTogether: true
         };
-    },
-    methods: {
-        // 
     },
     computed: {
         newWidth: {
@@ -113,7 +110,7 @@ export default defineComponent({
                 </div>
             </div>
             <div class="interpolation">
-                <label for="interpolation">Interpolation:</label>
+                <label for="interpolation">Interpolation:&nbsp;</label>
                 <select v-model="newInterpolation" id="interpolation">
                     <option value="default" selected>default</option>
                     <option value="nearestNeighbor"
@@ -123,6 +120,9 @@ export default defineComponent({
                 </select>
             </div>
         </div>
+        <hr />
+        <!--  -->
+
     </div>
 </template>
 
@@ -132,6 +132,8 @@ export default defineComponent({
     justify-content: center;
     align-items: center;
     gap: 1rem;
+
+    margin-block: 1rem;
 }
 
 .input-with-suffix>input {
@@ -220,22 +222,22 @@ export default defineComponent({
 }
 
 .units input[type="radio"]:checked+span {
-    box-shadow: 0 0 0 0.0625em #0043ed;
-    background-color: #dee7ff;
+    box-shadow: 0 0 0 0.0625em var(--color-blue);
+    background-color: var(--vt-c-black-mute);
     z-index: 1;
-    color: #0043ed;
+    color: var(--color-blue);
 }
 
 .units label span {
     display: block;
     cursor: pointer;
-    background-color: #fff;
+    /* background-color: #fff; */
     padding: 0.375em .75em;
     position: relative;
     margin-left: .0625em;
     box-shadow: 0 0 0 0.0625em #b5bfd9;
     letter-spacing: .05em;
-    color: #3e4963;
+    /* color: #3e4963; */
     text-align: center;
     transition: background-color .5s ease;
 }
@@ -246,5 +248,9 @@ export default defineComponent({
 
 .units label:last-child span {
     border-radius: 0 .375em .375em 0;
+}
+
+.interpolation {
+    text-align: center;
 }
 </style>

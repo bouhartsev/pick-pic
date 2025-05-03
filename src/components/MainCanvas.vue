@@ -20,7 +20,9 @@ export default defineComponent({
     isShowFiltration: Boolean,
 
     interpolation: String,
+    filterMatrix: Array<Array<number>>,
     isShiftPressed: Boolean,
+    lut: Array<number>,
   },
   emits: [
     'changeState',
@@ -28,15 +30,11 @@ export default defineComponent({
     'updateImageSizes',
     'updateColor',
     'updateCoordinates',
-    // TODO
+    'updateColorData'
   ],
   data() {
     return {
-      // currentImg: new Image(),
-
       canvasRef: undefined as HTMLCanvasElement | undefined,
-      // iw: 0,
-      // ih: 0,
       startX: 0,
       startY: 0,
       offsetX: null as number | null,
@@ -68,6 +66,18 @@ export default defineComponent({
     // ih() {
     //   this.drawImage();
     // },
+    filterMatrix: {
+      handler() {
+        this.applyMatrixFilter();
+      },
+      deep: true
+    },
+    lut: {
+      handler() {
+        this.applyCurves();
+      },
+      deep: true
+    },
 
   },
   mounted() {
@@ -91,8 +101,6 @@ export default defineComponent({
       // newImage.crossOrigin = `Anonymous`;
 
       this.$emit('updateImg', newImage);
-
-      // this.drawImage();
     },
 
     getImageSizes(canvas: HTMLCanvasElement, img: HTMLImageElement): [number, number, number, number] {
@@ -206,12 +214,16 @@ export default defineComponent({
         // else {
         //   ctx.imageSmoothingEnabled = true;
         // }
+        this.updateColorData(imageData);
+
 
         this.$emit('updateImageSizes', ~~iw, ~~ih);
       };
       // force onload
       newImg.src = this.currentImg.src;
     },
+
+    // RESIZE TOOL
     interpolationCb(img: ImageData, iw: number, ih: number): ImageData | null {
       if (this.interpolation === 'nearestNeighbor') {
         return this.nearestNeighborInterpolation(img, iw, ih);
@@ -241,6 +253,7 @@ export default defineComponent({
       return new ImageData(newData, newWidth, newHeight);
     },
 
+    // HAND TOOL
     moveImage() {
       const canvas = this.canvasRef;
       if (!canvas || !this.iw || !this.ih || this.offsetX === null || this.offsetY === null) return;
@@ -248,6 +261,8 @@ export default defineComponent({
 
       this.drawImage();
     },
+
+    // PIPETTE TOOL
     handleColorPick({ offsetX, offsetY }: { offsetX: number; offsetY: number }): string | undefined {
       const ctx = this.canvasRef?.getContext('2d');
       if (!ctx) return;
@@ -257,8 +272,8 @@ export default defineComponent({
       const pixel = ctx.getImageData(offsetX, offsetY, 1, 1).data;
       return `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
     },
-    handleCoordinates({ offsetX, offsetY, clientX, clientY }: { offsetX: number; offsetY: number; clientX: number; clientY: number }): [number | null, number | null] {
-      if (!this.iw || !this.ih) return [null, null];
+    handleCoordinates({ offsetX, offsetY, clientX, clientY }: { offsetX: number; offsetY: number; clientX: number; clientY: number }): Array<number | null> {
+      if (!this.iw || !this.ih || !this.currentImg) return [null, null];
 
       const x = clientX - this.startX;
       const y = clientY - this.startY;
@@ -268,8 +283,13 @@ export default defineComponent({
       if (xMouse <= 0 || yMouse <= 0 || this.iw <= xMouse || this.ih <= yMouse) {
         return [null, null];
       }
-      return [~~xMouse, ~~yMouse];
+
+      const realScale = this.iw / this.currentImg.width;
+
+      return [xMouse, yMouse].map(coord => ~~(coord / realScale));
     },
+
+    // SAVE TOOL
     saveImage(): void {
       const imageDataURL = this.canvasRef?.toDataURL('image/png');
       if (!imageDataURL) return;
@@ -281,6 +301,128 @@ export default defineComponent({
       document.body.removeChild(link);
     },
 
+    // CURVES TOOL
+    updateColorData(imageData: ImageData) {
+      const { data } = imageData;
+      if (!data) {
+        return;
+      }
+      const rData = new Array(256).fill(0);
+      const gData = new Array(256).fill(0);
+      const bData = new Array(256).fill(0);
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        rData[r]++;
+        gData[g]++;
+        bData[b]++;
+      }
+
+      const scaledR = this.scaleData(rData);
+      const scaledG = this.scaleData(gData);
+      const scaledB = this.scaleData(bData);
+      this.$emit('updateColorData', { r: scaledR, g: scaledG, b: scaledB });
+    },
+    scaleData(data: number[]): number[] {
+      const max = Math.max(...data);
+      return data.map((value) => (value / max) * 255);
+    },
+    applyCurves() {
+      const ctx = this.canvasRef?.getContext("2d");
+      if (!ctx || !this.lut) return;
+
+      if (!this.lut.length) {
+        this.drawImage();
+        return;
+      }
+
+      const imageData = ctx.getImageData(this.offsetX ?? 0, this.offsetY ?? 0, this.iw ?? 0, this.ih ?? 0);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = this.lut[data[i]];
+        data[i + 1] = this.lut[data[i + 1]];
+        data[i + 2] = this.lut[data[i + 2]];
+      }
+
+      ctx.putImageData(imageData, this.offsetX ?? 0, this.offsetY ?? 0);
+    },
+
+    // FILtRATION TOOL
+    async applyMatrixFilter() {
+      const ctx = this.canvasRef?.getContext("2d");
+      if (!ctx || !this.filterMatrix) return;
+      const imageData = ctx.getImageData(this.offsetX ?? 0, this.offsetY ?? 0, this.iw ?? 0, this.ih ?? 0);
+      const newData = new Uint8ClampedArray(imageData.data.length);
+
+      const edgeData = this.expandImageEdges(
+        imageData.data,
+        imageData.width,
+        imageData.height
+      );
+
+      for (let y = 0; y < imageData.height; y++) {
+        for (let x = 0; x < imageData.width; x++) {
+          for (let c = 0; c < 4; c++) {
+            const outputIndex = (y * imageData.width + x) * 4 + c;
+            let sum = 0;
+            let matrixSum = 0;
+            for (let ky = 0; ky < 3; ky++) {
+              for (let kx = 0; kx < 3; kx++) {
+                const inputIndex =
+                  ((y + ky) * (imageData.width + 2) + (x + kx)) * 4 + c;
+                sum += edgeData[inputIndex] * this.filterMatrix[ky][kx];
+                matrixSum += this.filterMatrix[ky][kx];
+              }
+            }
+            newData[outputIndex] = sum / matrixSum;
+          }
+        }
+      }
+
+      imageData.data.set(newData);
+      ctx.putImageData(imageData, this.offsetX ?? 0, this.offsetY ?? 0);
+    },
+    expandImageEdges(data: Uint8ClampedArray, width: number, height: number) {
+      const expandedWidth = width + 2;
+      const expandedHeight = height + 2;
+      const edgeData = new Uint8ClampedArray(expandedWidth * expandedHeight * 4);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const inputIndex = (y * width + x) * 4;
+          const outputIndex = ((y + 1) * expandedWidth + x + 1) * 4;
+          edgeData.set(
+            data.subarray(inputIndex, inputIndex + 4),
+            outputIndex
+          );
+        }
+      }
+
+      for (let y = 0; y < expandedHeight; y++) {
+        for (let x = 0; x < expandedWidth; x++) {
+          const outputIndex = (y * expandedWidth + x) * 4;
+          if (
+            x === 0 ||
+            x === expandedWidth - 1 ||
+            y === 0 ||
+            y === expandedHeight - 1
+          ) {
+            const nearestX = Math.max(1, Math.min(x, expandedWidth - 2));
+            const nearestY = Math.max(1, Math.min(y, expandedHeight - 2));
+            const nearestIndex = (nearestY * expandedWidth + nearestX) * 4;
+            edgeData.set(
+              edgeData.subarray(nearestIndex, nearestIndex + 4),
+              outputIndex
+            );
+          }
+        }
+      }
+      return edgeData;
+    },
+
+    // MOUSE EVENTS
     handleMouseDown(e: MouseEvent) {
       this.isDragging = true;
       this.startX = e.clientX - (this.offsetX ?? 0);

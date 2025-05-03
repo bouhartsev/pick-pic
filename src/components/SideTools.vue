@@ -38,11 +38,7 @@ export default {
 
 <template>
   <div class="side-tools" ref="tools">
-    <!-- reset img button -->
 
-    <button class="button" @click="handleButtonClick" :disabled="!hasImg" value="save" title="Save current image">
-      Save
-    </button>
     <button class="button" @click="handleButtonClick" :disabled="!hasImg" value="hand"
       title="Move the image across the canvas">
       Hand
@@ -53,6 +49,15 @@ export default {
     </button>
     <button class="button" @click="handleButtonClick" :disabled="!hasImg" value="edit" title="Edit the image">
       Edit
+    </button>
+    <button class="button" @click="handleButtonClick" :disabled="!hasImg" value="save" title="Save current image">
+      Save
+    </button>
+    <!-- reset img button -->
+    <button class="button" @click="handleButtonClick" :disabled="!hasImg" value="close"
+      title="Stop working with current image">
+      Close
+      <!-- TODO: add modal "are you sure" -->
     </button>
 
     <label class="slider">
